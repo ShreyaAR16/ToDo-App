@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ToDo App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="bg-white min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md shadow-xl rounded-lg overflow-hidden">
+        <div class="bg-[#7fffd4] text-[#006d5b] p-4 rounded-t-lg">
+            <h1 class="text-2xl font-bold text-center flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 11 12 14 22 4"></polyline>
+                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                </svg>
+                ToDo App
+            </h1>
+        </div>
+        <div class="p-6 bg-white">
+            <form id="todo-form" class="flex mb-6">
+                <input type="text" id="new-todo" placeholder="Add a new task..." class="flex-grow mr-2 border-[#7fffd4] focus:border-[#5fe0b5] focus:ring-[#5fe0b5] rounded-md">
+                <button type="submit" class="bg-[#7fffd4] hover:bg-[#5fe0b5] text-[#006d5b] px-4 py-2 rounded-md flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Add
+                </button>
+            </form>
+
+            <div id="todo-list" class="space-y-3"></div>
+
+            <div class="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div class="flex flex-wrap justify-center gap-2">
+                    <button class="filter-btn cursor-pointer bg-[#e0fff5] text-[#006d5b] hover:bg-[#c0fff0] px-3 py-1 rounded-full" data-filter="all">All</button>
+                    <button class="filter-btn cursor-pointer bg-[#e0fff5] text-[#006d5b] hover:bg-[#c0fff0] px-3 py-1 rounded-full" data-filter="active">Active</button>
+                    <button class="filter-btn cursor-pointer bg-[#e0fff5] text-[#006d5b] hover:bg-[#c0fff0] px-3 py-1 rounded-full" data-filter="completed">Completed</button>
+                </div>
+                <button id="clear-completed" class="text-[#006d5b] hover:text-[#004d3d] hover:bg-[#c0fff0] border-[#7fffd4] px-3 py-1 rounded-md border">
+                    Clear Completed
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const todoForm = document.getElementById('todo-form');
+            const newTodoInput = document.getElementById('new-todo');
+            const todoList = document.getElementById('todo-list');
+            const clearCompletedBtn = document.getElementById('clear-completed');
+            const filterBtns = document.querySelectorAll('.filter-btn');
+            let currentFilter = 'all';
+
+            function fetchTodos() {
+                fetch('/api/todos')
+                    .then(response => response.json())
+                    .then(todos => renderTodos(todos));
+            }
+
+            function renderTodos(todos) {
+                todoList.innerHTML = '';
+                todos.filter(todo => {
+                    if (currentFilter === 'active') return !todo.completed;
+                    if (currentFilter === 'completed') return todo.completed;
+                    return true;
+                }).forEach(todo => {
+                    const todoItem = document.createElement('div');
+                    todoItem.className = 'flex items-center justify-between bg-[#f0fffa] p-3 rounded-lg shadow transition-all duration-300 hover:shadow-md hover:bg-[#e0fff5]';
+                    todoItem.innerHTML = `
+                        <div class="flex items-center">
+                            <button class="toggle-todo mr-2 ${todo.completed ? 'text-[#5fe0b5]' : 'text-gray-400'}" data-id="${todo.id}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    ${todo.completed ? '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>' : '<circle cx="12" cy="12" r="10"></circle>'}
+                                </svg>
+                            </button>
+                            <span class="${todo.completed ? 'line-through text-gray-400' : 'text-gray-700'}">${todo.text}</span>
+                        </div>
+                        <button class="delete-todo text-[#006d5b] hover:text-[#004d3d] hover:bg-[#c0fff0] p-1 rounded-md" data-id="${todo.id}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                        </button>
+                    `;
+                    todoList.appendChild(todoItem);
+                });
+            }
+
+            todoForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const text = newTodoInput.value.trim();
+                if (text) {
+                    fetch('/api/todos', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ text: text }),
+                    })
+                    .then(response => response.json())
+                    .then(() => {
+                        newTodoInput.value = '';
+                        fetchTodos();
+                    });
+                }
+            });
+
+            todoList.addEventListener('click', function(e) {
+                if (e.target.closest('.toggle-todo')) {
+                    const id = e.target.closest('.toggle-todo').dataset.id;
+                    fetch(`/api/todos/${id}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ completed: e.target.closest('.toggle-todo').classList.contains('text-gray-400') }),
+                    })
+                    .then(() => fetchTodos());
+                } else if (e.target.closest('.delete-todo')) {
+                    const id = e.target.closest('.delete-todo').dataset.id;
+                    fetch(`/api/todos/${id}`, {
+                        method: 'DELETE',
+                    })
+                    .then(() => fetchTodos());
+                }
+            });
+
+            clearCompletedBtn.addEventListener('click', function() {
+                fetch('/api/todos/clear-completed', {
+                    method: 'DELETE',
+                })
+                .then(() => fetchTodos());
+            });
+
+            filterBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    currentFilter = this.dataset.filter;
+                    filterBtns.forEach(b => b.classList.remove('bg-[#7fffd4]'));
+                    this.classList.add('bg-[#7fffd4]');
+                    fetchTodos();
+                });
+            });
+
+            fetchTodos();
+        });
+    </script>
+</body>
+</html>
