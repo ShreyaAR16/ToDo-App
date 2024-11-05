@@ -1,8 +1,9 @@
 from flask import Flask, render_template, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+import os
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='../templates')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///todos.db'
 db = SQLAlchemy(app)
 
@@ -20,7 +21,7 @@ class Todo(db.Model):
             'created_at': self.created_at.isoformat()
         }
 
-@app.route('/')
+@app.route('/', methods=['GET'])
 def index():
     return render_template('index.html')
 
@@ -58,11 +59,8 @@ def clear_completed():
     db.session.commit()
     return '', 204
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+with app.app_context():
+    db.create_all()
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     app.run(debug=True)
