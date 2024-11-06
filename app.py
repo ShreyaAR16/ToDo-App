@@ -58,10 +58,6 @@ def clear_completed():
     db.session.commit()
     return '', 204
 
-@app.route('/')
-def index():
-    return render_template('index.html')
-
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
